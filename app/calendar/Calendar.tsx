@@ -31,15 +31,82 @@ interface DayEvents {
 const Calendar = () => {
   // ✅ ALL HOOKS AT THE TOP
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const todayMonth = now.getMonth();
+  const todayYear = now.getFullYear();
 
   // State for current displayed month
-  const [displayMonth, setDisplayMonth] = useState(currentMonth);
-  const [displayYear, setDisplayYear] = useState(currentYear);
+  const [displayMonth, setDisplayMonth] = useState(todayMonth);
+  const [displayYear, setDisplayYear] = useState(todayYear);
 
   // React Query hook
   const { data: eventsData, isLoading, isError } = useCalendarEvents();
+
+  // Calculate available month range from events data
+  const { minMonth, minYear, maxMonth, maxYear } = useMemo(() => {
+    if (!eventsData || !Array.isArray(eventsData) || eventsData.length === 0) {
+      return {
+        minMonth: todayMonth,
+        minYear: todayYear,
+        maxMonth: todayMonth,
+        maxYear: todayYear,
+      };
+    }
+
+    let minDate = new Date();
+    let maxDate = new Date();
+
+    eventsData.forEach((event: GoogleCalendarEvent) => {
+      const eventDate = event.start.dateTime || event.start.date;
+      if (eventDate) {
+        const date = new Date(eventDate);
+        if (date < minDate) minDate = date;
+        if (date > maxDate) maxDate = date;
+      }
+    });
+
+    return {
+      minMonth: minDate.getMonth(),
+      minYear: minDate.getFullYear(),
+      maxMonth: maxDate.getMonth(),
+      maxYear: maxDate.getFullYear(),
+    };
+  }, [eventsData, todayMonth, todayYear]);
+
+  // Check if can navigate to previous/next month
+  const canGoPrevious = useMemo(() => {
+    if (displayYear > minYear) return true;
+    if (displayYear === minYear && displayMonth > minMonth) return true;
+    return false;
+  }, [displayMonth, displayYear, minMonth, minYear]);
+
+  const canGoNext = useMemo(() => {
+    if (displayYear < maxYear) return true;
+    if (displayYear === maxYear && displayMonth < maxMonth) return true;
+    return false;
+  }, [displayMonth, displayYear, maxMonth, maxYear]);
+
+  // Navigation handlers
+  const handlePreviousMonth = () => {
+    if (!canGoPrevious) return;
+    
+    if (displayMonth === 0) {
+      setDisplayMonth(11);
+      setDisplayYear(displayYear - 1);
+    } else {
+      setDisplayMonth(displayMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (!canGoNext) return;
+    
+    if (displayMonth === 11) {
+      setDisplayMonth(0);
+      setDisplayYear(displayYear + 1);
+    } else {
+      setDisplayMonth(displayMonth + 1);
+    }
+  };
 
   // Transform Google Calendar events to our format and organize by day
   const events = useMemo<DayEvents>(() => {
@@ -66,8 +133,8 @@ const Calendar = () => {
 
       const date = new Date(eventDate);
       
-      // Only include events from current month and year
-      if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) {
+      // Only include events from the displayed month and year
+      if (date.getMonth() !== displayMonth || date.getFullYear() !== displayYear) {
         return;
       }
 
@@ -97,7 +164,7 @@ const Calendar = () => {
     });
 
     return eventsByDay;
-  }, [eventsData, currentMonth, currentYear]);
+  }, [eventsData, displayMonth, displayYear]);
 
   // ✅ HANDLE LOADING/ERROR STATES AFTER ALL HOOKS
   if (isLoading) {
@@ -118,15 +185,16 @@ const Calendar = () => {
 
   console.log('Fetched Events:', eventsData);
   console.log('Organized Events by Day:', events);
+  console.log('Display Month:', displayMonth, 'Display Year:', displayYear);
   
   // Spanish day names
   const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-  // Get number of days in current month
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  // Get number of days in displayed month
+  const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
   
-  // Get day of week for first day of month (0 = Sunday, adjust to Monday = 0)
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+  // Get day of week for first day of displayed month (0 = Sunday, adjust to Monday = 0)
+  const firstDayOfMonth = new Date(displayYear, displayMonth, 1).getDay();
   const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
   // Create array of days
@@ -162,8 +230,8 @@ const Calendar = () => {
   const isToday = (day: number): boolean => {
     const today = new Date();
     return day === today.getDate() && 
-           currentMonth === today.getMonth() && 
-           currentYear === today.getFullYear();
+           displayMonth === today.getMonth() && 
+           displayYear === today.getFullYear();
   };
 
   return (
@@ -172,10 +240,20 @@ const Calendar = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-slate-800 mb-2">
-            {getMonthName(currentMonth)} {currentYear}
+            Calendario de Eventos
           </h1>
           <p className="text-slate-500">Tus eventos del mes</p>
         </div>
+
+        {/* Calendar Actions Bar */}
+        <CalendarActionsBar
+          currentMonth={displayMonth}
+          currentYear={displayYear}
+          onPreviousMonth={handlePreviousMonth}
+          onNextMonth={handleNextMonth}
+          canGoPrevious={canGoPrevious}
+          canGoNext={canGoNext}
+        />
 
         {/* Calendar Grid */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
