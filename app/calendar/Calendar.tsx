@@ -1,12 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useCalendarEvents } from '../../hooks/useCalendarEvents';
+import CalendarActionsBar from './CalendarActionsBar';
 
-// Sample event data structure
+// Google Calendar event structure
+interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: { date?: string; dateTime?: string };
+  end: { date?: string; dateTime?: string };
+  location?: string;
+}
+
+// Internal calendar event structure
 interface CalendarEvent {
   id: string;
   title: string;
   time: string;
+  description?: string;
+  location?: string;
   color?: string;
 }
 
@@ -15,35 +29,98 @@ interface DayEvents {
 }
 
 const Calendar = () => {
-  // Get current date info
+  // ✅ ALL HOOKS AT THE TOP
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+
+  // State for current displayed month
+  const [displayMonth, setDisplayMonth] = useState(currentMonth);
+  const [displayYear, setDisplayYear] = useState(currentYear);
+
+  // React Query hook
+  const { data: eventsData, isLoading, isError } = useCalendarEvents();
+
+  // Transform Google Calendar events to our format and organize by day
+  const events = useMemo<DayEvents>(() => {
+    if (!eventsData || !Array.isArray(eventsData)) return {};
+
+    const eventsByDay: DayEvents = {};
+    const colors = [
+      'bg-blue-100 text-blue-700',
+      'bg-purple-100 text-purple-700',
+      'bg-green-100 text-green-700',
+      'bg-orange-100 text-orange-700',
+      'bg-pink-100 text-pink-700',
+      'bg-indigo-100 text-indigo-700',
+      'bg-teal-100 text-teal-700',
+      'bg-red-100 text-red-700',
+      'bg-yellow-100 text-yellow-700',
+      'bg-cyan-100 text-cyan-700',
+    ];
+
+    eventsData.forEach((event: GoogleCalendarEvent, index: number) => {
+      // Get the date from the event
+      const eventDate = event.start.dateTime || event.start.date;
+      if (!eventDate) return;
+
+      const date = new Date(eventDate);
+      
+      // Only include events from current month and year
+      if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) {
+        return;
+      }
+
+      const day = date.getDate();
+
+      // Extract time or use "All day" for date-only events
+      let time = 'Todo el día';
+      if (event.start.dateTime) {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        time = `${hours}:${minutes}`;
+      }
+
+      const transformedEvent: CalendarEvent = {
+        id: event.id,
+        title: event.summary || 'Sin título',
+        time: time,
+        description: event.description,
+        location: event.location,
+        color: colors[index % colors.length],
+      };
+
+      if (!eventsByDay[day]) {
+        eventsByDay[day] = [];
+      }
+      eventsByDay[day].push(transformedEvent);
+    });
+
+    return eventsByDay;
+  }, [eventsData, currentMonth, currentYear]);
+
+  // ✅ HANDLE LOADING/ERROR STATES AFTER ALL HOOKS
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="text-slate-600">Cargando eventos...</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="text-red-600">Error al cargar los eventos.</div>
+      </div>
+    );
+  }
+
+  console.log('Fetched Events:', eventsData);
+  console.log('Organized Events by Day:', events);
   
   // Spanish day names
   const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-  
-  // Sample events data
-  const [events] = useState<DayEvents>({
-    5: [
-      { id: '1', title: 'Reunión de equipo', time: '09:00', color: 'bg-blue-100 text-blue-700' },
-      { id: '2', title: 'Presentación cliente', time: '14:30', color: 'bg-purple-100 text-purple-700' },
-      { id: '3', title: 'Revisión proyecto', time: '16:00', color: 'bg-green-100 text-green-700' }
-    ],
-    12: [
-      { id: '4', title: 'Workshop diseño', time: '10:00', color: 'bg-orange-100 text-orange-700' },
-      { id: '5', title: 'Llamada con proveedor', time: '15:00', color: 'bg-pink-100 text-pink-700' }
-    ],
-    18: [
-      { id: '6', title: 'Demo producto', time: '11:00', color: 'bg-indigo-100 text-indigo-700' }
-    ],
-    25: [
-      { id: '7', title: 'Cierre mensual', time: '09:30', color: 'bg-red-100 text-red-700' },
-      { id: '8', title: 'Planificación Q1', time: '13:00', color: 'bg-teal-100 text-teal-700' },
-      { id: '9', title: 'Team building', time: '17:00', color: 'bg-yellow-100 text-yellow-700' },
-      { id: '10', title: 'Retrospectiva', time: '18:30', color: 'bg-cyan-100 text-cyan-700' }
-    ]
-  });
 
   // Get number of days in current month
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -62,6 +139,12 @@ const Calendar = () => {
   const getSortedEvents = (day: number): CalendarEvent[] => {
     const dayEvents = events[day] || [];
     return dayEvents.sort((a, b) => {
+      // Handle "All day" events - put them first
+      if (a.time === 'Todo el día' && b.time !== 'Todo el día') return -1;
+      if (a.time !== 'Todo el día' && b.time === 'Todo el día') return 1;
+      if (a.time === 'Todo el día' && b.time === 'Todo el día') return 0;
+
+      // Sort by time
       const timeA = a.time.split(':').map(Number);
       const timeB = b.time.split(':').map(Number);
       return timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1]);
@@ -156,6 +239,7 @@ const Calendar = () => {
                         className={`text-xs p-1.5 rounded ${
                           event.color || 'bg-slate-100 text-slate-700'
                         } hover:shadow-sm transition-shadow cursor-pointer`}
+                        title={`${event.title}${event.location ? ` - ${event.location}` : ''}${event.description ? `\n${event.description}` : ''}`}
                       >
                         <div className="font-medium truncate">
                           {event.time}
@@ -163,6 +247,11 @@ const Calendar = () => {
                         <div className="truncate opacity-90">
                           {event.title}
                         </div>
+                        {event.location && (
+                          <div className="truncate text-[10px] opacity-70 mt-0.5">
+                            📍 {event.location}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
