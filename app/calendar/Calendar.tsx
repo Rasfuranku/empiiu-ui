@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useCalendarEvents } from '../../hooks/useCalendarEvents';
 import CalendarActionsBar from './CalendarActionsBar';
+import EventModal from './EventModal';
 
 // Google Calendar event structure
 interface GoogleCalendarEvent {
@@ -40,6 +41,20 @@ const Calendar = () => {
   // State for current displayed month
   const [displayMonth, setDisplayMonth] = useState(todayMonth);
   const [displayYear, setDisplayYear] = useState(todayYear);
+
+  // State for event modal
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEvent(null);
+  };
 
   // React Query hook
   const { data: eventsData, isLoading, isError } = useCalendarEvents();
@@ -111,7 +126,7 @@ const Calendar = () => {
     }
   };
 
-  const formatDate = (eventDate: string): Date => {
+    const formatDate = (eventDate: string): Date => {
     const partsDate = eventDate.split('-');
 
       const year = parseInt(partsDate[0], 10);
@@ -354,6 +369,7 @@ const Calendar = () => {
                     {dayEvents.map((event) => (
                       <div
                         key={event.id}
+                        onClick={() => handleEventClick(event)}
                         className={`text-xs p-1.5 rounded ${
                           event.color || 'bg-slate-100 text-slate-700'
                         } hover:shadow-sm transition-shadow cursor-pointer ${
@@ -411,6 +427,13 @@ const Calendar = () => {
             <span>Evento de varios días</span>
           </div>
         </div>
+
+        {/* Event Modal */}
+        <EventModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          event={selectedEvent}
+        />
       </div>
     </div>
   );
