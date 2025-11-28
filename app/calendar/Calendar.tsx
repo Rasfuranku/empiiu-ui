@@ -22,6 +22,9 @@ interface CalendarEvent {
   description?: string;
   location?: string;
   color?: string;
+  isMultiDay?: boolean;
+  isFirstDay?: boolean;
+  isLastDay?: boolean;
 }
 
 interface DayEvents {
@@ -108,6 +111,17 @@ const Calendar = () => {
     }
   };
 
+  const formatDate = (eventDate: string): Date => {
+    const partsDate = eventDate.split('-');
+
+      const year = parseInt(partsDate[0], 10);
+      const month = parseInt(partsDate[1], 10) - 1;
+      const dayOfMonth = parseInt(partsDate[2], 10);
+      
+      const date = new Date(year, month, dayOfMonth);
+      return date
+  }
+
   // Transform Google Calendar events to our format and organize by day
   const events = useMemo<DayEvents>(() => {
     if (!eventsData || !Array.isArray(eventsData)) return {};
@@ -127,47 +141,66 @@ const Calendar = () => {
     ];
 
     eventsData.forEach((event: GoogleCalendarEvent, index: number) => {
-      // Get the date from the event
-      const eventDate = event.start.dateTime || event.start.date;
-      if (!eventDate) return;
-
-      const partsDate = eventDate.split('-');
-
-      const year = parseInt(partsDate[0], 10);
-      const month = parseInt(partsDate[1], 10) - 1;
-      const dayOfMonth = parseInt(partsDate[2], 10);
+      // Get the start and end dates from the event
+      const startDateStr = event.start.dateTime || event.start.date;
+      const endDateStr = event.end.dateTime || event.end.date;
       
-      const date = new Date(year, month, dayOfMonth);
-      console.log('Processing event date:', date, eventDate);
+      if (!startDateStr || !endDateStr) return;
+
+      const startDate = formatDate(startDateStr);
+      const endDate = formatDate(endDateStr);
       
-      // Only include events from the displayed month and year
-      if (date.getMonth() !== displayMonth || date.getFullYear() !== displayYear) {
-        return;
+      // For all-day events, the end date is exclusive (next day), so subtract 1 day
+      if (event.start.date && event.end.date) {
+        endDate.setDate(endDate.getDate() - 1);
       }
 
-      const day = date.getDate();
+      // Calculate if this is a multi-day event
+      const isMultiDay = startDate.toDateString() !== endDate.toDateString();
+
+      // Get the color for this event
+      const eventColor = colors[index % colors.length];
 
       // Extract time or use "All day" for date-only events
-      let time = 'Todo el día';
+      let startTime = 'Todo el día';
       if (event.start.dateTime) {
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        time = `${hours}:${minutes}`;
+        const hours = startDate.getHours().toString().padStart(2, '0');
+        const minutes = startDate.getMinutes().toString().padStart(2, '0');
+        startTime = `${hours}:${minutes}`;
       }
 
-      const transformedEvent: CalendarEvent = {
-        id: event.id,
-        title: event.summary || 'Sin título',
-        time: time,
-        description: event.description,
-        location: event.location,
-        color: colors[index % colors.length],
-      };
+      // Loop through all days of the event
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        // Only include events from the displayed month and year
+        if (currentDate.getMonth() === displayMonth && currentDate.getFullYear() === displayYear) {
+          const day = currentDate.getDate();
+          
+          // Check if this is the first or last day of the multi-day event
+          const isFirstDay = currentDate.toDateString() === startDate.toDateString();
+          const isLastDay = currentDate.toDateString() === endDate.toDateString();
 
-      if (!eventsByDay[day]) {
-        eventsByDay[day] = [];
+          const transformedEvent: CalendarEvent = {
+            id: `${event.id}-${day}`,
+            title: event.summary || 'Sin título',
+            time: isFirstDay ? startTime : 'Todo el día',
+            description: event.description,
+            location: event.location,
+            color: eventColor,
+            isMultiDay: isMultiDay,
+            isFirstDay: isFirstDay,
+            isLastDay: isLastDay,
+          };
+
+          if (!eventsByDay[day]) {
+            eventsByDay[day] = [];
+          }
+          eventsByDay[day].push(transformedEvent);
+        }
+
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-      eventsByDay[day].push(transformedEvent);
     });
 
     return eventsByDay;
@@ -236,7 +269,6 @@ const Calendar = () => {
 
   const isToday = (day: number): boolean => {
     const today = new Date();
-
     return day === today.getDate() && 
            displayMonth === today.getMonth() && 
            displayYear === today.getFullYear();
@@ -324,13 +356,33 @@ const Calendar = () => {
                         key={event.id}
                         className={`text-xs p-1.5 rounded ${
                           event.color || 'bg-slate-100 text-slate-700'
-                        } hover:shadow-sm transition-shadow cursor-pointer`}
-                        title={`${event.title}${event.location ? ` - ${event.location}` : ''}${event.description ? `\n${event.description}` : ''}`}
+                        } hover:shadow-sm transition-shadow cursor-pointer ${
+                          event.isMultiDay ? 'border-l-2 border-opacity-50' : ''
+                        }`}
+                        style={event.isMultiDay ? {
+                          borderLeftColor: event.color?.includes('blue') ? '#2563eb' :
+                                         event.color?.includes('purple') ? '#9333ea' :
+                                         event.color?.includes('green') ? '#16a34a' :
+                                         event.color?.includes('orange') ? '#ea580c' :
+                                         event.color?.includes('pink') ? '#db2777' :
+                                         event.color?.includes('indigo') ? '#4f46e5' :
+                                         event.color?.includes('teal') ? '#0d9488' :
+                                         event.color?.includes('red') ? '#dc2626' :
+                                         event.color?.includes('yellow') ? '#ca8a04' :
+                                         event.color?.includes('cyan') ? '#0891b2' : '#64748b'
+                        } : {}}
+                        title={`${event.title}${event.isMultiDay ? ' (Evento de varios días)' : ''}${event.location ? ` - ${event.location}` : ''}${event.description ? `\n${event.description}` : ''}`}
                       >
+                        <div className="font-medium truncate">
+                          {event.time}
+                          {event.isMultiDay && !event.isFirstDay && (
+                            <span className="ml-1 opacity-60">(cont.)</span>
+                          )}
+                        </div>
                         <div className="truncate opacity-90">
                           {event.title}
                         </div>
-                        {event.location && (
+                        {event.location && event.isFirstDay && (
                           <div className="truncate text-[10px] opacity-70 mt-0.5">
                             📍 {event.location}
                           </div>
@@ -353,6 +405,10 @@ const Calendar = () => {
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-slate-200"></div>
             <span>Evento programado</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-slate-200 border-l-2 border-slate-600"></div>
+            <span>Evento de varios días</span>
           </div>
         </div>
       </div>
