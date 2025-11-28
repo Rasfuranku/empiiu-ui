@@ -131,7 +131,14 @@ const Calendar = () => {
       const eventDate = event.start.dateTime || event.start.date;
       if (!eventDate) return;
 
-      const date = new Date(eventDate);
+      const partsDate = eventDate.split('-');
+
+      const year = parseInt(partsDate[0], 10);
+      const month = parseInt(partsDate[1], 10) - 1;
+      const dayOfMonth = parseInt(partsDate[2], 10);
+      
+      const date = new Date(year, month, dayOfMonth);
+      console.log('Processing event date:', date, eventDate);
       
       // Only include events from the displayed month and year
       if (date.getMonth() !== displayMonth || date.getFullYear() !== displayYear) {
@@ -229,6 +236,7 @@ const Calendar = () => {
 
   const isToday = (day: number): boolean => {
     const today = new Date();
+
     return day === today.getDate() && 
            displayMonth === today.getMonth() && 
            displayYear === today.getFullYear();
@@ -319,9 +327,6 @@ const Calendar = () => {
                         } hover:shadow-sm transition-shadow cursor-pointer`}
                         title={`${event.title}${event.location ? ` - ${event.location}` : ''}${event.description ? `\n${event.description}` : ''}`}
                       >
-                        <div className="font-medium truncate">
-                          {event.time}
-                        </div>
                         <div className="truncate opacity-90">
                           {event.title}
                         </div>
