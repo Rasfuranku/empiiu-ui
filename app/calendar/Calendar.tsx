@@ -13,6 +13,8 @@ interface GoogleCalendarEvent {
   start: { date?: string; dateTime?: string };
   end: { date?: string; dateTime?: string };
   location?: string;
+  calendarId?: string;
+  calendarName?: string;
 }
 
 // Internal calendar event structure
@@ -46,6 +48,9 @@ const Calendar = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // State for calendar filter
+  const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
+
   const handleEventClick = (event: CalendarEvent) => {
     setSelectedEvent(event);
     setIsModalOpen(true);
@@ -58,6 +63,20 @@ const Calendar = () => {
 
   // React Query hook
   const { data: eventsData, isLoading, isError } = useCalendarEvents();
+
+  // Extract unique calendars from events
+  const uniqueCalendars = useMemo(() => {
+    if (!eventsData || !Array.isArray(eventsData)) return [];
+
+    const calendarsMap = new Map<string, string>();
+    eventsData.forEach((event: GoogleCalendarEvent) => {
+      if (event.calendarId && event.calendarName) {
+        calendarsMap.set(event.calendarId, event.calendarName);
+      }
+    });
+
+    return Array.from(calendarsMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [eventsData]);
 
   // Calculate available month range from events data
   const { minMonth, minYear, maxMonth, maxYear } = useMemo(() => {
@@ -106,7 +125,7 @@ const Calendar = () => {
   // Navigation handlers
   const handlePreviousMonth = () => {
     if (!canGoPrevious) return;
-    
+
     if (displayMonth === 0) {
       setDisplayMonth(11);
       setDisplayYear(displayYear - 1);
@@ -117,7 +136,7 @@ const Calendar = () => {
 
   const handleNextMonth = () => {
     if (!canGoNext) return;
-    
+
     if (displayMonth === 11) {
       setDisplayMonth(0);
       setDisplayYear(displayYear + 1);
@@ -126,20 +145,25 @@ const Calendar = () => {
     }
   };
 
-    const formatDate = (eventDate: string): Date => {
+  const formatDate = (eventDate: string): Date => {
     const partsDate = eventDate.split('-');
 
-      const year = parseInt(partsDate[0], 10);
-      const month = parseInt(partsDate[1], 10) - 1;
-      const dayOfMonth = parseInt(partsDate[2], 10);
-      
-      const date = new Date(year, month, dayOfMonth);
-      return date
+    const year = parseInt(partsDate[0], 10);
+    const month = parseInt(partsDate[1], 10) - 1;
+    const dayOfMonth = parseInt(partsDate[2], 10);
+
+    const date = new Date(year, month, dayOfMonth);
+    return date
   }
 
   // Transform Google Calendar events to our format and organize by day
   const events = useMemo<DayEvents>(() => {
     if (!eventsData || !Array.isArray(eventsData)) return {};
+
+    // Filter events by selected calendar
+    const filteredEvents = selectedCalendar
+      ? eventsData.filter((event: GoogleCalendarEvent) => event.calendarId === selectedCalendar)
+      : eventsData;
 
     const eventsByDay: DayEvents = {};
     const colors = [
@@ -155,16 +179,16 @@ const Calendar = () => {
       'bg-cyan-100 text-cyan-700',
     ];
 
-    eventsData.forEach((event: GoogleCalendarEvent, index: number) => {
+    filteredEvents.forEach((event: GoogleCalendarEvent, index: number) => {
       // Get the start and end dates from the event
       const startDateStr = event.start.dateTime || event.start.date;
       const endDateStr = event.end.dateTime || event.end.date;
-      
+
       if (!startDateStr || !endDateStr) return;
 
       const startDate = formatDate(startDateStr);
       const endDate = formatDate(endDateStr);
-      
+
       // For all-day events, the end date is exclusive (next day), so subtract 1 day
       if (event.start.date && event.end.date) {
         endDate.setDate(endDate.getDate() - 1);
@@ -190,7 +214,7 @@ const Calendar = () => {
         // Only include events from the displayed month and year
         if (currentDate.getMonth() === displayMonth && currentDate.getFullYear() === displayYear) {
           const day = currentDate.getDate();
-          
+
           // Check if this is the first or last day of the multi-day event
           const isFirstDay = currentDate.toDateString() === startDate.toDateString();
           const isLastDay = currentDate.toDateString() === endDate.toDateString();
@@ -219,7 +243,7 @@ const Calendar = () => {
     });
 
     return eventsByDay;
-  }, [eventsData, displayMonth, displayYear]);
+  }, [eventsData, displayMonth, displayYear, selectedCalendar]);
 
   // ✅ HANDLE LOADING/ERROR STATES AFTER ALL HOOKS
   if (isLoading) {
@@ -241,20 +265,20 @@ const Calendar = () => {
   console.log('Fetched Events:', eventsData);
   console.log('Organized Events by Day:', events);
   console.log('Display Month:', displayMonth, 'Display Year:', displayYear);
-  
+
   // Spanish day names
   const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   // Get number of days in displayed month
   const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
-  
+
   // Get day of week for first day of displayed month (0 = Sunday, adjust to Monday = 0)
   const firstDayOfMonth = new Date(displayYear, displayMonth, 1).getDay();
   const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
   // Create array of days
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  
+
   // Add empty cells for days before month starts
   const emptyDays = Array.from({ length: adjustedFirstDay }, (_, i) => i);
 
@@ -284,9 +308,9 @@ const Calendar = () => {
 
   const isToday = (day: number): boolean => {
     const today = new Date();
-    return day === today.getDate() && 
-           displayMonth === today.getMonth() && 
-           displayYear === today.getFullYear();
+    return day === today.getDate() &&
+      displayMonth === today.getMonth() &&
+      displayYear === today.getFullYear();
   };
 
   return (
@@ -308,6 +332,9 @@ const Calendar = () => {
           onNextMonth={handleNextMonth}
           canGoPrevious={canGoPrevious}
           canGoNext={canGoNext}
+          calendars={uniqueCalendars}
+          selectedCalendar={selectedCalendar}
+          onCalendarFilterChange={setSelectedCalendar}
         />
 
         {/* Calendar Grid */}
@@ -338,22 +365,20 @@ const Calendar = () => {
             {days.map((day) => {
               const dayEvents = getSortedEvents(day);
               const hasEvents = dayEvents.length > 0;
-              
+
               return (
                 <div
                   key={day}
-                  className={`min-h-32 border-b border-r border-slate-200 p-2 hover:bg-slate-50 transition-colors ${
-                    isToday(day) ? 'bg-blue-50' : 'bg-white'
-                  }`}
+                  className={`min-h-32 border-b border-r border-slate-200 p-2 hover:bg-slate-50 transition-colors ${isToday(day) ? 'bg-blue-50' : 'bg-white'
+                    }`}
                 >
                   {/* Day number */}
                   <div className="flex justify-between items-start mb-2">
                     <span
-                      className={`text-sm font-medium px-2 py-1 rounded-lg ${
-                        isToday(day)
-                          ? 'bg-blue-600 text-white'
-                          : 'text-slate-700'
-                      }`}
+                      className={`text-sm font-medium px-2 py-1 rounded-lg ${isToday(day)
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-700'
+                        }`}
                     >
                       {day}
                     </span>
@@ -370,22 +395,20 @@ const Calendar = () => {
                       <div
                         key={event.id}
                         onClick={() => handleEventClick(event)}
-                        className={`text-xs p-1.5 rounded ${
-                          event.color || 'bg-slate-100 text-slate-700'
-                        } hover:shadow-sm transition-shadow cursor-pointer ${
-                          event.isMultiDay ? 'border-l-2 border-opacity-50' : ''
-                        }`}
+                        className={`text-xs p-1.5 rounded ${event.color || 'bg-slate-100 text-slate-700'
+                          } hover:shadow-sm transition-shadow cursor-pointer ${event.isMultiDay ? 'border-l-2 border-opacity-50' : ''
+                          }`}
                         style={event.isMultiDay ? {
                           borderLeftColor: event.color?.includes('blue') ? '#2563eb' :
-                                         event.color?.includes('purple') ? '#9333ea' :
-                                         event.color?.includes('green') ? '#16a34a' :
-                                         event.color?.includes('orange') ? '#ea580c' :
-                                         event.color?.includes('pink') ? '#db2777' :
-                                         event.color?.includes('indigo') ? '#4f46e5' :
-                                         event.color?.includes('teal') ? '#0d9488' :
-                                         event.color?.includes('red') ? '#dc2626' :
-                                         event.color?.includes('yellow') ? '#ca8a04' :
-                                         event.color?.includes('cyan') ? '#0891b2' : '#64748b'
+                            event.color?.includes('purple') ? '#9333ea' :
+                              event.color?.includes('green') ? '#16a34a' :
+                                event.color?.includes('orange') ? '#ea580c' :
+                                  event.color?.includes('pink') ? '#db2777' :
+                                    event.color?.includes('indigo') ? '#4f46e5' :
+                                      event.color?.includes('teal') ? '#0d9488' :
+                                        event.color?.includes('red') ? '#dc2626' :
+                                          event.color?.includes('yellow') ? '#ca8a04' :
+                                            event.color?.includes('cyan') ? '#0891b2' : '#64748b'
                         } : {}}
                         title={`${event.title}${event.isMultiDay ? ' (Evento de varios días)' : ''}${event.location ? ` - ${event.location}` : ''}${event.description ? `\n${event.description}` : ''}`}
                       >
