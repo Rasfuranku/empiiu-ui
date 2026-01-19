@@ -8,6 +8,7 @@ export default function ReservaCita() {
     <>
     <Script id="meta-contact-tracking" strategy="afterInteractive">
         {`
+            <!-- Meta Pixel Code -->
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
             n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -16,7 +17,12 @@ export default function ReservaCita() {
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('track', '2117540535447521');
+            fbq('init', '2117540535447521');
+            fbq('track', 'PageView');
+            </script>
+            <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=2117540535447521&ev=PageView&noscript=1"
+            />
           `}
     </Script>
     <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
