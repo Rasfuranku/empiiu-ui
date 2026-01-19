@@ -16,7 +16,7 @@ export default function ReservaCita() {
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('track', 'CompleteRegistration');
+            fbq('track', '2117540535447521');
           `}
     </Script>
     <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
