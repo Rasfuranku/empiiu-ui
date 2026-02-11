@@ -1,8 +1,9 @@
 import Script from "next/script";
+import { GOOGLE_CALENDAR_URL } from "@/constants/constants";
 
 export default function ReservaCita() {
   // Replace this URL with your actual Google Script "Web App" URL
-  const googleScriptUrl = "https://calendar.google.com/calendar/appointments/schedules/AcZssZ2kSfPaixMI805kk03OP3YZfhT7dwTvAL2qJIkZFtYD9oxfznKzhXERnnLmVGDijwa0ndaI-U06?gv=true";
+  const googleScriptUrl = GOOGLE_CALENDAR_URL;
 
   return (
     <>
