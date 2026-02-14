@@ -314,7 +314,7 @@ const Calendar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen from-slate-50 to-slate-100 p-6 bg-regal-blue">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
