@@ -43,7 +43,7 @@ const CalendarActionsBar = ({
             onClick={() => onCalendarFilterChange(null)}
             className={`px-4 py-2 rounded-lg transition-all font-medium text-sm ${selectedCalendar === null
                 ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 shadow-sm hover:bg-slate-50'
+                : 'bg-white text-pink-lavender border border-slate-200 hover:border-slate-300 shadow-sm hover:bg-slate-50'
               }`}
           >
             Todos
@@ -56,7 +56,7 @@ const CalendarActionsBar = ({
               onClick={() => onCalendarFilterChange(calendar.id)}
               className={`px-4 py-2 rounded-lg transition-all font-medium text-sm truncate max-w-[200px] ${selectedCalendar === calendar.id
                   ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 shadow-sm hover:bg-slate-50'
+                  : 'bg-white text-pink-lavender border border-slate-200 hover:border-slate-300 shadow-sm hover:bg-slate-50'
                 }`}
               title={calendar.name}
             >
@@ -93,7 +93,7 @@ const CalendarActionsBar = ({
         </button>
 
         <div className="min-w-[140px] text-center">
-          <span className="text-lg font-semibold text-slate-800">
+          <span className="text-lg font-semibold text-pink-lavender">
             {getMonthName(currentMonth)} {currentYear}
           </span>
         </div>

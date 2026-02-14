@@ -318,10 +318,10 @@ const Calendar = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-slate-800 mb-2">
+          <h1 className="text-3xl font-semibold mb-2 text-pink-lavender">
             Calendario de Ferias y Eventos
           </h1>
-          <p className="text-slate-500">Tus eventos del mes</p>
+          <p className="text-pink-lavender">Tus eventos del mes</p>
         </div>
 
         {/* Calendar Actions Bar */}
@@ -436,7 +436,7 @@ const Calendar = () => {
         </div>
 
         {/* Legend */}
-        <div className="mt-6 flex items-center gap-4 text-sm text-slate-600">
+        <div className="mt-6 flex items-center gap-4 text-sm text-pink-lavender">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-600"></div>
             <span>Día actual</span>

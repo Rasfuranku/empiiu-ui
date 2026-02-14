@@ -3,10 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme{
-  --color-regal-blue: #f9f1e6;
+  --beige-empiiu: #f9f1e6;
+  --pink-lavender: #443784;
 }
 
 @theme inline {
@@ -14,6 +12,11 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+@theme {
+  --color-regal-blue: var(--beige-empiiu);
+  --color-pink-lavender: var(--pink-lavender);
 }
 
 @media (prefers-color-scheme: dark) {
