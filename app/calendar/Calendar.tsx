@@ -319,7 +319,7 @@ const Calendar = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-slate-800 mb-2">
-            Calendario de Eventos
+            Calendario de Ferias y Eventos
           </h1>
           <p className="text-slate-500">Tus eventos del mes</p>
         </div>
