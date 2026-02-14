@@ -5,6 +5,7 @@
   --foreground: #171717;
   --beige-empiiu: #f9f1e6;
   --pink-lavender: #443784;
+  --pink-lavender-light: #6c5ac5;
 }
 
 @theme inline {
@@ -17,6 +18,7 @@
 @theme {
   --color-regal-blue: var(--beige-empiiu);
   --color-pink-lavender: var(--pink-lavender);
+  --color-pink-lavender-light: var(--pink-lavender-light);
 }
 
 @media (prefers-color-scheme: dark) {

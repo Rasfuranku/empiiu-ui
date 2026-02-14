@@ -42,7 +42,7 @@ const CalendarActionsBar = ({
           <button
             onClick={() => onCalendarFilterChange(null)}
             className={`px-4 py-2 rounded-lg transition-all font-medium text-sm ${selectedCalendar === null
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                ? 'bg-pink-lavender text-white shadow-md hover:bg-pink-lavender-light'
                 : 'bg-white text-pink-lavender border border-slate-200 hover:border-slate-300 shadow-sm hover:bg-slate-50'
               }`}
           >
